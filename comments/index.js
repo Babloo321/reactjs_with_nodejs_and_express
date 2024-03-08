@@ -1,25 +1,91 @@
+// import express from 'express';
+// import bodyParser from 'body-parser';
+// import { randomBytes } from 'crypto';
+// import cors from 'cors';
+// import axios from 'axios';
+
+
+// const app = express();
+// app.use(bodyParser.json())
+// app.use(cors());
+// const commentsById = {};
+// app.get("/posts/:id/comments", (req, res) => {
+//     res.send(commentsById[req.params.id] || []);
+// });
+
+// app.post("/posts/:id/comments", async (req, res) => {
+//     const commentId = randomBytes(4).toString('hex');
+//     const { content } = req.body;
+//     const comments = commentsById[req.params.id] || [];
+//     comments.push({id: commentId, content});
+//     commentsById[req.params.id] = comments;
+
+//     await axios.post("http://localhost:4005/events", {
+//         type: "CommentCreated",
+//         data: {
+//             id: commentId,
+//             content,
+//             postId: req.params.id
+//         }
+//     });
+//     res.status(201).send(comments);
+// });
+
+// app.post("/events", (req, res) => {
+//     console.log("Received Event ", req.body.type);
+
+//     res.send({});
+// })
+
+// app.listen(4001, (req, res) => {
+//     console.log(`Comments Service is listening on 4001 port`);
+// })
+
+
 import express from 'express';
 import bodyParser from 'body-parser';
-import cors from 'cors';
 import { randomBytes } from 'crypto';
+import cors from 'cors';
+import axios from 'axios';
 
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-const comments = {}
+const commentsByPostId = {};
+
 app.get("/posts/:id/comments", (req, res) => {
-    res.send(comments[req.params.id] || []);
+  res.send(commentsByPostId[req.params.id] || []);
 });
-app.post("/posts/:id/comments", (req, res) => {
-    const id = randomBytes(4).toString('hex');
-    const {content} = req.body;
-    const comment = comments[req.body.id] || [];
-    comment.push({id, content});
-    comments[req.params.id] = comment;
-    res.status(201).send(comment);
+
+app.post("/posts/:id/comments", async (req, res) => {
+  const commentId = randomBytes(4).toString("hex");
+  const { content } = req.body;
+
+  const comments = commentsByPostId[req.params.id] || [];
+
+  comments.push({ id: commentId, content });
+
+  commentsByPostId[req.params.id] = comments;
+
+  await axios.post("http://localhost:4005/events", {
+    type: "CommentCreated",
+    data: {
+      id: commentId,
+      content,
+      postId: req.params.id,
+    },
+  });
+
+  res.status(201).send(comments);
+});
+
+app.post("/events", (req, res) => {
+  console.log("Received Event from Event-bus inside  comment Service:: ", req.body.type);
+
+  res.send({});
 });
 
 app.listen(4001, () => {
-    console.log("Comments service is listening on 4001 port");
-})
+  console.log("Listening on 4001");
+});
